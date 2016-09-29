@@ -1,0 +1,285 @@
+
+@{
+    ViewBag.Title = "RegisterPage";
+    Layout = "~/Views/Shared/_LayoutBlank.cshtml";
+
+}
+
+<div class="center-vertical bg-black col-md-12">
+    <div class="center-content" data-ng-controller="registerController as register">
+
+        <form id="registerForm"
+              name="register.registerForm" class="col-md-5 center-margin" ng-submit="_addPerson()" novalidate>
+
+            <h1 class="text-center pad25B font-blue font-size-40"><span class="opacity-80"><strong>Registration</strong></span></h1>
+            <div class="content-box">
+                <div class="content-box-wrapper center-margin">
+                    <label for="InputEmail" style="color:black">Enter Email *</label>
+                    <span style="color:red" ng-show="register.registerForm.email.$dirty && register.registerForm.email.$invalid">
+                        <span ng-show="register.registerForm.email.$error.email">Invalid Email Address.</span>
+                        <span ng-show="register.registerForm.email.$error.required">Email is required.</span>
+                    </span>
+                    <div class="col-md-12 input-group-lg">
+                        <span class="input-group-addon addon-inside bg-white font-primary">
+                            <i class="glyph-icon icon-envelope-o"></i>
+                        </span>
+                        <input type="email" class="form-control" ng-model="register.newPerson.email" name="email" id="email"
+                               placeholder="Enter Email" required>
+                    </div>
+
+                    <label for="InputFirstName" style="color:black"><strong>Enter First Name *</strong></label>
+                    <span style="color:red" ng-show="register.registerForm.firstName.$dirty && register.registerForm.firstName.$invalid">
+                        <span ng-show="register.registerForm.firstName.$error.required">First Name is required.</span>
+                        <span class="error" ng-show="register.showNewPersonErrors && register.registerForm.firstName.$error.minlength">
+                            Too short! Last name must be at least 2 characters
+                        </span>
+                        <span class="error" ng-show="register.showNewPersonErrors && register.registerForm.firstName.$error.maxlength">
+                            Too long! Last name must be 50 characters or less
+                        </span>
+                    </span>
+                    <div class="col-md-12 input-group-lg">
+                        <span class="input-group-addon addon-inside bg-white font-primary">
+                            <i class="glyph-icon icon-user"></i>
+                        </span>
+                        <input type="text" class="form-control" ng-model="register.newPerson.firstName" ng-minlength="2" ng-maxlength="50"
+                               name="firstName" id="firstName" placeholder="Enter First Name" required>
+                    </div>
+
+
+                    <label for="InputLastName" style="color:black">Enter Last Name *</label>
+                    <span style="color:red" ng-show="register.registerForm.lastName.$dirty && register.registerForm.lastName.$invalid">
+                        <span ng-show="register.registerForm.lastName.$error.required">Last Name is required.</span>
+                    </span>
+                    <div class="col-md-12 input-group-lg">
+                        <span class="input-group-addon addon-inside bg-white font-primary">
+                            <i class="glyph-icon icon-user"></i>
+                        </span>
+                        <input type="text" class="form-control" ng-model="register.newPerson.lastName" ng-minlength="2" ng-maxlength="50"
+                               name="lastName" id="lastName" placeholder="Enter Last Name" required>
+
+                    </div>
+
+                    <!--User Role DROP DOWN-->
+
+                    <label for="UserRole" style="color:black"><strong>Select a Role *</strong></label>
+
+                    <div class="col-sm-12 form-group">
+                        <span style="color:red" ng-show="register.registerForm.UserRole.$dirty && register.registerForm.UserRole.$invalid">
+                            <span ng-show="register.registerForm.UserRole.$error.required">Role is required.</span>
+                        </span>
+                        <select id="UserRole" name="UserRole" class="form-control" ng-model="register.newPerson.userRole"
+                                ng-options="registerUser.roleName for registerUser in register.items" required>
+                            <option selected value="">--Select--</option>
+                            <option selected value="{{registerUser.roleId}}">{{registerUser.roleName}}</option>
+
+
+                        </select>
+
+                    </div>
+
+
+
+                    <label for="InputPassword" style="color:black">Enter Password * </label>
+                    <span style="color:red" ng-show="register.registerForm.password.$dirty && register.registerForm.password.$invalid">
+                        Please enter a password
+                        <span ng-show="!register.registerForm.password.$error.required && (register.registerForm.password.$error.minlength ||
+                    register.registerForm.password.$error.maxlength) && register.registerForm.password.$dirty">Passwords must be between 8 and 20 characters.</span>
+                        <span ng-show="!register.registerForm.password.$error.required && !register.registerForm.password.$error.minlength &&
+                    !register.registerForm.password.$error.maxlength && register.registerForm.password.$error.pattern &&
+                    register.registerForm.password.$dirty">Must contain one lower &amp; uppercase letter, and one number and a symbol(!#$%^&*)</span>
+                    </span>
+                    <div class="col-md-12 input-group-lg">
+                        <span class="input-group-addon addon-inside bg-white font-primary">
+                            <i class="glyph-icon icon-key"></i>
+                        </span>
+                        <input type="password" class="form-control" ng-model="register.newPerson.password" ng-minlength="8" ng-maxlength="20"
+                               ng-pattern="/(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z])(?=.*[!#$%^&*])/"
+                               name="password" id="password" placeholder="Enter Password" required>
+
+                    </div>
+                    <!---->
+                    <label for="InputPassword" style="color:black">Confirm Password * </label>
+                    <span style="color:red" ng-show="register.registerForm.password2.$error.noMatch">Does not match other password </span>
+                    <div class="col-md-12 input-group-lg">
+                        <span class="input-group-addon addon-inside bg-white font-primary">
+                            <i class="glyph-icon icon-key"></i>
+                        </span>
+
+                        <input type="password" class="form-control" ng-model="register.newPerson.password2" ng-minlength="8" ng-maxlength="20"
+                               name="password2" id="password2" placeholder="Same Password" required>
+
+                    </div>
+
+                    <br />
+                    <p>
+                        <button type="button" data-ng-click="register.addPerson()" id="cmdRegisterPerson"
+                                class="btn-primary btn btn-success center-vertical" ng-disabled="register.registerForm.$invalid">
+                            Register
+                        </button>
+                    </p>
+
+
+                    <h3> *Required<span style="float: right;"><a href="/">Go Home</a></span></h3>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<style type="text/css">
+    .css-form input.ng-invalid.ng-touched {
+        background-color: #FA787E;
+    }
+
+    .css-form input.ng-valid.ng-touched {
+        background-color: #78FA89;
+    }
+</style>
+
+@section scripts
+
+{
+
+
+    <script src="~/Scripts/RapidRents.services.register.js"></script>
+    <script type="text/javascript">
+
+        (function () {
+            "use strict";
+
+            angular.module(APPNAME)
+                .factory('$registerService', registerServiceFactory);
+
+            registerServiceFactory.$inject = ['$baseService', '$RapidRents'];
+
+            function registerServiceFactory($baseService, $RapidRents) {
+
+                var aRapidRentsServiceObject = RapidRents.services.register;
+
+                var newService = $baseService.merge(true, {}, aRapidRentsServiceObject, $baseService);
+
+                return newService;
+            }
+        })();
+
+        (function () {
+            "use strict";
+
+            angular.module(APPNAME)
+                .controller('registerController', RegisterController);
+
+            angular.module(APPNAME)
+                .directive('validPasswordC', InputConfirm);
+
+            RegisterController.$inject = ['$scope', '$baseController', "$registerService"];
+
+            function InputConfirm() {
+                return {
+                    require: 'ngModel',
+                    link: function (scope, elm, attrs, ctrl) {
+
+                        ctrl.$parsers.unshift(matchParser);
+
+                        function matchParser(viewValue, $scope) {
+
+                            var noMatch = (viewValue === scope.register.registerForm.password.$viewValue);
+
+                            ctrl.$setValidity('noMatch', noMatch);
+
+                            return noMatch;
+                        }
+                    }
+                }
+            }
+
+            function RegisterController(
+                $scope
+                , $baseController
+                , $registerService) {
+
+                var vm = this;
+                vm.items = null;
+                vm.newPerson = null;
+                vm.registerForm = null;
+                vm.personFormVisible = false;
+                vm.showNewPersonErrors = false;
+
+                vm.$registerService = $registerService;
+                vm.$scope = $scope;
+                vm.regSuccess = _regSuccess;
+                vm.onRegError = _onRegError;
+                vm.onGetError = _onGetError;
+                vm.onGetSuccess = _onGetSuccess;
+                vm.fireAlert = _fireAlert;
+                vm.addPerson = _addPerson;
+                vm.resetRegistrationForm = _resetRegistrationForm;
+
+                $baseController.merge(vm, $baseController);
+
+                vm.notify = vm.$registerService.getNotifier($scope);
+
+                render();
+
+                function render() {
+                    vm.$registerService.getRoleId(vm.onGetSuccess, vm.onGetError)
+                }
+
+                function _regSuccess(data) {
+
+                    vm.fireAlert('success', 'Please check your email to confirm your account', 'Thank you for registering');
+
+                    vm.notify(function () {
+                        vm.items = data.items;
+                    });
+                    vm.resetRegistrationForm();
+                }
+
+
+
+                function _addPerson() {
+
+                    if (vm.registerForm.$valid) {
+
+                        vm.$log.log("data is valid! go save this object -> ", vm.newPerson);
+                        vm.newPerson.userRole = vm.newPerson.userRole.roleId;
+                        vm.$registerService.post(vm.newPerson, vm.regSuccess, vm.onRegError)
+
+                    }
+                    else {
+                        vm.fireAlert('error', 'This form was submitted with invalid data. Please try again', 'Error');
+                    }
+                }
+
+
+                function _onRegError(jqXhr, error) {
+
+                    vm.showErrors(jqXhr.responseJSON);
+                }
+
+                function _onGetSuccess(data) {
+                    vm.items = data.items;
+                }
+
+
+                function _onGetError(jqXhr, error) {
+                    vm.showErrors(jqXhr.responseJSON);
+
+                }
+
+                function _fireAlert(type, message, header) {
+
+                    vm.$alertService[type](message, header);
+                }
+
+                function _resetRegistrationForm() {
+                    vm.newPerson = null;
+                    vm.registerForm.$setPristine();
+                    vm.registerForm.$setUntouched();
+                }
+
+            }
+        })();
+
+    </script>
+}
