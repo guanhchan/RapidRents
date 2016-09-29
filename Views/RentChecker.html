@@ -1,0 +1,675 @@
+
+<div class="container" data-ng-controller="rentCheckController as rentCheckCtrl" id="rentCheckCtrl">
+
+    <div class="col-xs-12">
+        <div class="page-header">
+            <h1>Check Your Rent</h1>
+        </div>
+        <div class="col-sm-12">
+            <ng-include src="'/Scripts/RapidRents/Address/RentSearch.html'"></ng-include>
+        </div>
+        <div>
+            <ng-include src="'/Scripts/RapidRents/RentCheck/TabBox.html'"></ng-include>
+        </div>
+    </div>
+</div>
+
+
+
+@section scripts{
+
+    <script src="~/Scripts/RapidRents.tests.services.js"></script>
+    <script src="~/Scripts/RapidRents/shared/Filters/statesFilter.js"></script>
+    <script src="~/Scripts/RapidRents.services.state.js"></script>
+    <script src="~/Scripts/RapidRents.services.address.js"></script>
+    <script src="~/Scripts/RapidRents/Address/services.address.js"></script>
+    <script src="~/Scripts/RapidRents/maps/services.geo.js"></script>
+
+    <script type="text/javascript">
+
+        (function () {
+            "use strict";
+
+            angular.module(APPNAME)
+                .config(["$routeProvider", "$locationProvider", function ($routeProvider, $locationProvider) {
+
+                    $routeProvider.when('/', {
+                        templateUrl: '/Scripts/RapidRents/RentCheck/Matches.html',
+                        controller: 'rentCheckListingController',
+                        controllerAs: 'rentCheckListingCtrl'
+                    }).when('/area', {
+                        templateUrl: '/Scripts/RapidRents/RentCheck/Area.html',
+                        controller: 'rentCheckListingController',
+                        controllerAs: 'rentCheckListingCtrl'
+
+                    }).when('/mapVeiw', {
+                        templateUrl: '/Scripts/RapidRents/RentCheck/Map.html',
+                        controller: 'mapController',
+
+                    });
+
+
+                    $locationProvider.html5Mode(false);
+
+                }]);
+
+        })();
+
+        (function () {
+            "use strict";
+
+            angular.module(APPNAME)
+            .controller("rentCheckController", RentCheckController);
+
+
+            RentCheckController.$inject = ['$scope', '$baseController', '$addressService', '$stateService', '$geoService', '$timeout'];
+
+            function RentCheckController($scope, $baseController, $addressService, $stateService, $geoService, $timeout) {
+
+                var vm = this;
+                $baseController.merge(vm, $baseController);
+                vm.costSearch = {};
+                vm.isSearched = false;
+                vm.isSubmitted = false;
+                vm.islatLong = false;
+                vm.isCurrentSearchList = false;
+                vm.isCurrentSearchListArea = false;
+
+                vm.$stateService = $stateService;
+                vm.$addressService = $addressService;
+                vm.notify = vm.$addressService.getNotifier($scope);
+                vm.$geoService = $geoService;
+                vm.$scope = $scope;
+
+                vm.submitSearch = _submitSearch;
+                vm.statesSuccess = _statesSuccess;
+
+                vm.currentRequestLabel = "Current Request:";
+
+                vm.tabs = [
+
+                  { link: '#/', label: 'Searched Address' },
+                  { link: '#/area', label: 'Apartments Near By' },
+                    { link: '#/mapVeiw', label: 'Map View' }
+                ];
+
+                vm.selectedTab = vm.tabs[0];
+                vm.tabClass = _tabClass;
+                vm.setSelectedTab = _setSelectedTab;
+
+
+                render();
+
+                function render() {
+                    vm.$systemEventService.listen("currentSearchList", _onSystemEvent1, vm);
+
+                    vm.$systemEventService.listen("currentSearchListArea", _onSystemEvent2, vm);
+
+                    vm.$systemEventService.listen("latLng", _onSystemEvent3, vm);
+
+                    vm.$systemEventService.listen("resultNull", _onSystemEvent4, vm);
+
+                    vm.setUpCurrentRequest(vm);
+
+                    switch (vm.currentRequest.originalPath) {
+                       
+                        case "/":
+                            break;
+
+                        case "/area":
+                            break;
+                        case "/mapVeiw":
+                            break;
+
+
+                    }
+                    vm.$stateService.GetByCountryRegionCode("US", vm.statesSuccess, vm.statesError);
+
+                }
+
+                function _onSystemEvent1(event, payload) {
+                    console.log('touched1');
+                    vm.currentSearchList = payload[1].message;
+                    vm.isCurrentSearchList = true;
+
+                }
+
+                function _onSystemEvent2(event, payload) {
+                    console.log('touched2');
+                    vm.currentSearchListArea = payload[1].message;
+                    vm.isCurrentSearchListArea = true;
+
+                }
+
+                function _onSystemEvent3(event, payload) {
+                    console.log('touched3');
+                    vm.latLng = payload[1].message;
+                    vm.islatLng = true;
+
+                }
+
+                function _onSystemEvent4(event, payload) {
+                    console.log('touched4');
+                    vm.resultNull = payload[1].message;
+
+                }
+
+                function _tabClass(tab) {
+                    if (vm.selectedTab == tab) {
+                        return "active";
+                    } else {
+                        return "";
+                    }
+                }
+
+                function _setSelectedTab(tab) {
+
+                    vm.selectedTab = tab;
+                }
+
+                function _statesSuccess(data) {
+
+                    if (data == null) {
+                        vm.$log.error("this is null");
+                    } else {
+                        _receiveStates(data);
+                    }
+                }
+
+                function _receiveStates(data) {
+
+                    vm.notify(function () {
+                        vm.states = data.items;
+                    })
+                }
+
+                function _submitSearch() {
+
+                    var eventName = "bam";
+                    var eventPayload = { message: vm.costSearch };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+                    vm.isSubmitted = true;
+                    vm.isSearched = true;
+                }
+            }
+        })();
+
+        (function () {
+            "use strict";
+
+            angular.module(APPNAME)
+            .controller("rentCheckListingController", RentCheckListingController);
+
+            RentCheckListingController.$inject = ['$scope', '$baseController', '$addressService', '$geoService'];
+
+            function RentCheckListingController($scope, $baseController, $addressService, $geoService) {
+
+                var vm = this;
+                $baseController.merge(vm, $baseController);
+                vm.currentSearchList = null;
+                vm.costSearch = {};
+                vm.currentSearchList = {};
+                vm.currentSearchListArea = {};
+                vm.sum = null;
+                vm.avg = null;
+                vm.average = null;
+        
+     
+                vm.resultNull = false;
+                vm.resultAreaNull = false;
+                vm.resultNullMsg = "There are no results found for your building.";
+                vm.resultAreaNull = "There are no results found in the area.";
+
+                vm.$scope = $scope;
+                vm.$addressService = $addressService;
+                vm.$geoService = $geoService;
+                vm.notify = vm.$addressService.getNotifier($scope);
+                vm.onSystemEvent = _onSystemEvent;
+
+                vm.averageRent = _averageRent;
+                vm.costAreaSuccess = _costAreaSuccess;
+
+                render();
+
+                vm.$systemEventService.listen("bam", vm.onSystemEvent, vm);
+
+                function render() {
+
+
+
+
+                    vm.parent = vm.getParentController('rentCheckCtrl');
+
+
+                    if (vm.parent.isCurrentSearchList) {
+
+                        if (vm.parent.resultNull) {
+                            vm.resultNull = vm.parent.resultNull;
+                            vm.currentSearchList = {};
+
+                        } else {
+
+                            vm.resultNull = false;
+                            vm.currentSearchList = vm.parent.currentSearchList;
+
+                        }
+
+                        _averageRent();
+                    }
+
+                    if (vm.parent.isCurrentSearchListArea) {
+
+                        vm.currentSearchListArea = vm.parent.currentSearchListArea;
+
+
+
+                        _averageRent();
+                    }
+
+                   
+
+
+                }
+
+                function _onSystemEvent(event, payload) {
+                    console.log('touched');
+
+                    vm.address = payload[1].message;
+
+
+                    _submitAddressForm(vm.address);
+
+                }
+
+                function _submitAddressForm() {
+
+                    var address = (vm.address.Line1 + " "
+                        + vm.address.City + " "
+                        + vm.address.state + " "
+                        + vm.address.ZipCode);
+
+                    vm.$geoService.getLatLng(address, _onGeoCodeSuccess);
+                }
+
+                function _geoCodeAddress(address, onScb) {
+                    $geoService.geocode({ 'address': address }, onScb);
+                };
+
+                function _onGeoCodeSuccess(results) {
+
+                    console.log(results);
+
+
+
+
+                    var lat = results.lat;
+                    var lon = results.lng;
+
+                    vm.latLng = new google.maps.LatLng(lat, lon);
+
+                    vm.address.lat = lat;
+                    vm.address.lng = lon;
+                    vm.address.radius = 10;
+
+                    _submitAreaSearch();
+
+                }
+
+                function _mapLoad(latLng) {
+
+                    if (vm.map == null) {
+                        var mapProp = {
+                            center: latLng,
+                            zoom: 12
+                        };
+                        vm.map = vm.$geoService.getMap(document.getElementById("map-canvas"), mapProp);
+                    }
+                }
+
+                function _submitAreaSearch() {
+
+                    var eventName = "latLng";
+                    var eventPayload = { message: vm.latLng };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+
+                  
+                    vm.$addressService.rentCheckAll(vm.address, vm.costAreaSuccess, vm.onAddressError);
+                    vm.isSearchedMatch = true;
+                }
+
+
+                function _costAreaSuccess(data) {
+
+                    console.log(data);
+                    vm.notify(function () {
+
+                        if (data.item.matches == null) {
+                            vm.resultNull = true;
+                            vm.currentSearchList = {};
+                            var eventName = "resultNull";
+                            var eventPayload = { message: vm.resultNull };
+                            vm.$systemEventService.broadcast(eventName, eventPayload);
+
+
+                        } else {
+                            vm.resultNull = false;
+                            vm.currentSearchList = data.item.matches;
+                        }
+                        if (data.item.area == null) {
+                            vm.resultAreaNull = true;
+                            vm.currentSearchListArea = {};
+                        } else {
+                            vm.resultAreaNull = false;
+                            vm.isSearchedArea = true;
+                            vm.currentSearchListArea = data.item.area;
+
+                        }
+
+
+                    })
+                    _averageRent();
+
+                    var eventName = "currentSearchList";
+                    var eventPayload = { message: vm.currentSearchList };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+
+                    var eventName = "currentSearchListArea";
+                    var eventPayload = { message: vm.currentSearchListArea };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+
+
+
+                }
+
+
+
+                function _averageRent() {
+
+                    var n = vm.currentSearchList.length;
+
+                    var sum = 0;
+                    for (var i = 0; i < vm.currentSearchList.length; i++) {
+                        sum += vm.currentSearchList[i].rentCost;
+                    }
+
+                    var totalCount = 0;
+                    var totalCost = 0;
+                    for (var i = 0; i < vm.currentSearchListArea.length; i++) {
+                        if (vm.currentSearchListArea[i].rentCost !== 0) {
+                            totalCost += vm.currentSearchListArea[i].rentCost;
+                            totalCount = totalCount + 1;
+                        }
+                    }
+
+
+                    vm.average = (sum / n);
+
+                    vm.averageAreaRent = (totalCost / totalCount);
+
+
+                }
+
+
+
+            }
+
+        })();
+
+        (function () {
+            "use strict";
+
+            angular.module(APPNAME)
+                .controller('mapController', MapController);
+
+            MapController.$inject = ['$scope', '$baseController', '$addressService', '$geoService'];
+
+            function MapController(
+                  $scope
+                , $baseController
+                , $addressService
+                , $geoService
+                ) {
+
+                var vm = this;
+                vm.map = null;
+                vm.onlatLngSuccess = null;
+                vm.isMapThere = false;
+                $baseController.merge(vm, $baseController);
+                vm.$scope = $scope;
+
+                vm.markers = {};
+                vm.costSearch = {};
+                vm.currentSearchList = {};
+                vm.currentSearchListArea = {};
+                vm.address = null;
+                vm.isSearchedMatch = false;
+                vm.isSearchedArea = false;
+           
+                vm.map = null;
+                vm.events = null;
+                vm.resultNullMsg = "There are no results found for your building.";
+                vm.resultAreaNull = "There are no results found in the area.";
+
+                vm.$addressService = $addressService;
+                vm.$geoService = $geoService;
+                vm.notify = vm.$addressService.getNotifier($scope);
+
+                vm.submitAddressForm = _submitAddressForm;
+                vm.costAreaSuccess = _costAreaSuccess;
+
+                vm.latLng = new google.maps.LatLng(34.0580162, -118.1944975);
+                vm.newCostSearch = null;
+                vm.isDataSuccess = false;
+
+                vm.$addressService = $addressService;
+
+
+                vm.customMapSettings = {};
+
+
+                vm.notify = vm.$addressService.getNotifier($scope);
+
+                render();
+
+                vm.$systemEventService.listen("bam", _onTestSystemEvent, vm);
+
+                function render() {
+                    $geoService = new google.maps.Geocoder();
+
+
+                    vm.parent2 = vm.getParentController('rentCheckCtrl');
+                    if (vm.parent2.islatLng) {
+
+                        vm.latLng = vm.parent2.latLng;
+                    }
+
+                    if (vm.parent2.isCurrentSearchListArea) {
+
+                        _mapLoad(vm.latLng);
+
+
+                        vm.markers = vm.$geoService.placeMarkers(vm.map, vm.parent2.currentSearchListArea, contentProvider, designMarker);
+
+
+                    }
+
+
+
+                }
+
+                function _onTestSystemEvent(event, payload) {
+                    console.log('touched');
+
+                    vm.address = payload[1].message;
+
+
+                    _submitAddressForm(vm.address);
+
+                }
+
+                function _submitAddressForm() {
+
+                    var address = (vm.address.Line1 + " "
+                        + vm.address.City + " "
+                        + vm.address.state + " "
+                        + vm.address.ZipCode);
+
+                    vm.$geoService.getLatLng(address, _onGeoCodeSuccess);
+                }
+
+                function _geoCodeAddress(address, onScb) {
+                    $geoService.geocode({ 'address': address }, onScb);
+                };
+
+                function _onGeoCodeSuccess(results) {
+
+                    console.log(results);
+
+
+
+
+                    var lat = results.lat;
+                    var lon = results.lng;
+
+                    vm.latLng = new google.maps.LatLng(lat, lon);
+
+                    vm.address.lat = lat;
+                    vm.address.lng = lon;
+                    vm.address.radius = 10;
+
+                    _submitAreaSearch();
+
+                }
+
+                function _mapLoad(latLng) {
+
+                    if (vm.map == null) {
+                        var mapProp = {
+                            center: latLng,
+                            zoom: 12
+                        };
+                        vm.map = vm.$geoService.getMap(document.getElementById("map-canvas"), mapProp);
+                    }
+                }
+
+                function _submitAreaSearch() {
+
+                    var eventName = "latLng";
+                    var eventPayload = { message: vm.latLng };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+
+                    _mapLoad(vm.latLng);
+                    vm.$addressService.rentCheckAll(vm.address, vm.costAreaSuccess, vm.onAddressError);
+                    vm.isSearchedMatch = true;
+                }
+
+
+                function _costAreaSuccess(data) {
+
+                    console.log(data);
+                    vm.notify(function () {
+
+                        if (data.item.matches == null) {
+                            vm.resultNull = true;
+                            vm.currentSearchList = {};
+                            var eventName = "resultNull";
+                            var eventPayload = { message: vm.resultNull };
+                            vm.$systemEventService.broadcast(eventName, eventPayload);
+
+
+                        } else {
+                            vm.resultNull = false;
+                            vm.currentSearchList = data.item.matches;
+                        }
+                        if (data.item.area == null) {
+                            vm.resultAreaNull = true;
+                            vm.currentSearchListArea = {};
+                        } else {
+                            vm.resultAreaNull = false;
+                            vm.isSearchedArea = true;
+                            vm.currentSearchListArea = data.item.area;
+
+                        }
+
+                        _removeMarkers();
+
+                        vm.markers = vm.$geoService.placeMarkers(vm.map, vm.currentSearchListArea, contentProvider, designMarker);
+
+                    })
+
+                    var eventName = "currentSearchList";
+                    var eventPayload = { message: vm.currentSearchList };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+
+                    var eventName = "currentSearchListArea";
+                    var eventPayload = { message: vm.currentSearchListArea };
+                    vm.$systemEventService.broadcast(eventName, eventPayload);
+
+
+
+                }
+
+                function designMarker(singleItem) {
+
+                    var customIcon;
+                    var customAnimation;
+
+                    if (singleItem.listings == null) {
+                        customIcon = '/images/modern-marker-red.png';
+                    }
+
+                    else if (singleItem.listings[0]) {
+                        customIcon = '/images/modern-marker-green.png';
+                    }
+
+                    vm.customMapSettings = { icon: customIcon };
+
+                    return vm.customMapSettings;
+                }
+
+                function contentProvider(singleItem) {
+                    if (!singleItem) {
+                        vm.$log.error("singleItem does not exist");
+                        return null;
+                    }
+
+                    var content = null;
+
+                    if (!singleItem.listings) {
+                        content = singleItem.line1;
+                    }
+
+                    else if (!singleItem.listings[0]) {
+                        content = singleItem.line1;
+                    }
+
+                    else if (singleItem) {
+                        content = " Rent: $" + singleItem.rentCost +
+                       "<br/>" + singleItem.line1;
+                    }
+
+                    return content;
+                }
+
+                function _removeMarkers() {
+                    var property;
+                    for (property in vm.markers) {
+                        var markers = vm.markers[property];
+                        markers.setMap(null);
+
+                        delete vm.markers[property];
+
+                        vm.onlatLngSuccess;
+                    }
+                }
+
+
+
+
+
+
+            }
+        })();
+    </script>
+
+}
